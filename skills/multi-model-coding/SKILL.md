@@ -55,6 +55,7 @@ Copy this checklist and work through it:
 8. **Wait for background work only through completion notices.** Do not find processes with `pgrep -f`; treat a review with a non-zero exit code as not done.
 9. **Do not start the implementer before the spec pre-read is ruled.** A Codex run cannot take messages; every ruling made after it starts costs a full rework round. In work package P1.6b the tester raised 18 questions after the implementer had started (paradigm.md section 13).
 10. **Keep work packages small.** About 30 acceptance items per package at most; a 70-item package took four hours of drafting and three full review rounds, and its first implementation round ran for hours.
+11. **Accept on the whole repository's tests, after merging current main.** A package's own tests and its tester's tests both missed a start-order regression that only older binary tests caught (paradigm.md section 13.5).
 
 ## Exhaustive Tasks
 

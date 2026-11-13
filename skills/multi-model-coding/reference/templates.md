@@ -119,6 +119,7 @@ You are a **verifier**. Your job is to reproduce, one by one, the review finding
 
 - Clean room: {read-deny list}; under `{review materials directory}` read only the findings file above.
 - Do not spawn subagents, do not use the network, do not commit to git.
+- Database access: {how to reach the test database from your sandbox}. Do not start containers or proxies of your own.
 - Other verifiers are running on this machine: run only your own targeted tests, not whole packages with race or `make` targets. Put temporary files in `{TMPDIR}`.
 - Before finishing, delete every `zz_verify_*` file and revert all instrumentation; `git status --short` must print nothing.
 - Time budget is about 45 minutes; if one group takes far too long, mark it "undetermined" and explain.

@@ -222,7 +222,7 @@ Every time, record each reviewer's precision (confirmed plus partly confirmed ÷
 - Why Gemini review time varies so widely (19-50 minutes); not yet investigated.
 - Whether Kimi, Sonnet or DeepSeek can hold a full controller session (dispatching, acceptance, merging, gate), not just a single decision (section 12).
 - Whether the spec pre-read (section 13) catches most of the questions the tester would otherwise raise after the implementer starts, and what it costs.
-- Shadow verification on P1.6b and the next two work packages: SWE-2 and an Opus verifier check the same findings; whether SWE-2 can take over verification for real work packages, not just the replayed benchmark.
+- Shadow verification on P1.6b and the next two work packages: SWE-2 and an Opus verifier check the same findings; whether SWE-2 can take over verification for real work packages, not just the replayed benchmark. First package done (section 13.5): no missed real issue, but three false confirmations; two packages to go.
 
 ## 12. Model Substitution Benchmark (2026-11-13)
 
@@ -322,4 +322,27 @@ Of the 18 questions, 12 were cross-cutting conventions rather than domain behavi
 
 - Sending a message to a subagent at the moment the harness is resuming it fails with HTTP 409 ("the agent's turn is already being resumed") and stops the subagent; its files survive. Send a message only after its completion notice, and resend once if it stops this way.
 - When the Go module cache was moved off the home directory, an agent's first `go vet` downloaded the toolchain and modules from the public proxy. Point `GOMODCACHE` at the cache's real location and set `GOPROXY=off` for agents that must stay offline.
+
+### 13.5 Outcome (2026-11-14)
+
+P1.6b merged on 2026-11-14 after three implementer rounds (the third an extra, targeted one) and twelve tester rounds.
+
+| Stage | Measured |
+|---|---|
+| Review | GPT xhigh and Gemini, three blind parts, 52 raw findings; the Opus verifier merged them into 37 groups: 31 confirmed, 4 partly confirmed, 3 not confirmed; 4 groups rated P1 |
+| Shadow verification | SWE-2 (Devin swe-2-max) on the same findings: 26 minutes against Opus's 18. It agreed on all four P1 groups and missed none of Opus's confirmed issues, but confirmed three findings the spec does not require (Opus cited the spec text; the controller agreed with Opus) and raised two P2 groups to P1. It could not reach PostgreSQL from the Devin sandbox, started its own container and left socat processes behind |
+| Tester rounds 7-12 | All six were the tester's own mistakes: wrong response field, wrong column name, a config value outside its range, a wait condition with a race |
+| Full gate | Caught one regression the package's own tests and the tester's tests both missed (below) |
+
+**The regression.** A new admin route built the execution service while the control handler was being assembled, which happens during configuration loading, before the catalog and admission components start. The service captured nil for the health view and the rate limiter and kept them: faulted deployments were still routed and capacity slots were never registered. Only binary tests from two earlier packages failed. The controller confirmed the cause by bisecting against the previous release and patching a scratch copy, then sent the fix back to the implementer, which added a self-test that starts components in the real order and asserts the dependencies are non-nil.
+
+**The misdiagnosis.** After merging main, one tester test failed only under the full parallel run. The controller blamed a lock-waiter query scoped to the whole database; the tester replied that every test creates its own database, found the real cause (a race inside the test's own interleaving) and fixed it. The brief stated a cause as fact; it should have stated the symptom and labelled the cause as a hypothesis.
+
+**Changes adopted from this package:**
+
+1. **The acceptance gate is the whole repository's suite, merged with current main.** Wiring and start-order regressions surface only in older packages' binary tests. Run it again after merging main, even when the merge touches only test helpers.
+2. **Keep the Opus verifier authoritative for now.** SWE-2 finds what is broken nearly as well, but is weaker on "does the spec require this". Until the shadow period ends, the controller re-checks every SWE-2 "confirmed" that lacks a spec citation.
+3. **Verification briefs say how to reach the database from the sandbox** and forbid starting containers.
+4. **Rework briefs separate the symptom from the controller's hypothesis** and invite the recipient to refute the hypothesis.
+5. **A gate script that stops at the first failed stage hides later stages.** When the unit stage fails on a known timing flake, still run the binary stage, so one pass gives the full picture.
 
