@@ -14,6 +14,7 @@
 10. Selection Guidelines
 11. Open Questions
 12. Model Substitution Benchmark (2026-11-13)
+13. Observations from Work Package P1.6b (2026-11-13)
 
 ## 1. Overview
 
@@ -130,8 +131,10 @@ Rationale:
 | Stage | Method | Output | Measured time (medium task) |
 |---|---|---|---|
 | 1. Spec and rulings | Write the work as verifiable items with hard limits, units of measurement and exceptions; handle exhaustive tasks per section 5 first | Spec items, ruling numbers | — |
+| 1a. Size check | At most about 30 acceptance items per work package; split larger ones before review (section 13) | Package split | — |
+| 1b. Spec pre-read | The tester lists only what it cannot assert (templates.md section 5); the controller rules before anyone starts | Rulings | about 30 min + rulings |
 | 2. Task brief | Write it from the section 6 structure; all implementers share one brief | Task brief file | 10 min |
-| 3. Implementation | Implementers work in separate worktrees; run several in parallel when comparing approaches | Change + delivery notes | 50-90 min |
+| 3. Implementation | Implementers work in separate worktrees, the tester in its own; run several implementers in parallel when comparing approaches | Change + tests + delivery notes | 50-90 min |
 | 4. Controller acceptance | Rerun the acceptance commands on an idle machine; run the tester's tests one by one or with `-shuffle=on`; add `-count=40` runs for tests prone to nondeterminism | Acceptance record | 10-20 min |
 | 5. Cross-family dual review | Copy each candidate into an anonymous read-only copy with neutral commit messages; GPT and Gemini review in parallel with the same prompt | Two reviews | 10-50 min |
 | 6. Verification | Merge each candidate's two reviews into one file without sources; verifiers reproduce them group by group | Verification report | 7-12 min |
@@ -218,6 +221,8 @@ Every time, record each reviewer's precision (confirmed plus partly confirmed ÷
 - Whether the cross-family dual review is as complementary on tasks that are not in Go or not spec-driven.
 - Why Gemini review time varies so widely (19-50 minutes); not yet investigated.
 - Whether Kimi, Sonnet or DeepSeek can hold a full controller session (dispatching, acceptance, merging, gate), not just a single decision (section 12).
+- Whether the spec pre-read (section 13) catches most of the questions the tester would otherwise raise after the implementer starts, and what it costs.
+- Shadow verification on P1.6b and the next two work packages: SWE-2 and an Opus verifier check the same findings; whether SWE-2 can take over verification for real work packages, not just the replayed benchmark.
 
 ## 12. Model Substitution Benchmark (2026-11-13)
 
@@ -283,4 +288,38 @@ Both Gemini models recommended abandoning candidate B, which ended up the cleane
 - **Reviewer:** keep GPT xhigh plus one Gemini review. Only Carbon and Hydrogen reach Argon's level, at over $4 and 26-43 minutes per review; the cheaper models miss too much.
 - **Controller:** Kimi, Sonnet and DeepSeek match GPT on a single decision for well under a dollar, but a full controller session has not been tested; keep the current session as controller until it has. Do not use Gemini models as controller.
 - **Reviewing well and deciding well are different skills:** DeepSeek and Kimi were among the weakest reviewers and among the best controllers.
+
+## 13. Observations from Work Package P1.6b (2026-11-13)
+
+P1.6b (ledger adjustments, rollups, daily reconciliation, history rebuild, reporting queries and bulk repricing for the model gateway) was the first work package run end to end with the section 4 workflow after the experiments. These are observations from one package, written while its first implementation round was still running.
+
+### 13.1 What Happened
+
+| Stage | Measured |
+|---|---|
+| Spec | Interface draft grew to 3,041 lines and 70 acceptance items. Drafting ran from 12:00 to about 15:40: versions 2 to 5.2, three full GPT + Gemini review rounds, one targeted fix check and one quick check |
+| Rulings after review | Four more ruling sections (static-check names and file ownership; fixture format details; the tester's 15 questions; 3 further questions) |
+| Fixtures | A subagent asked to compute and write the fixture data was stopped by a safety check and wrote nothing; the controller wrote the generator itself, with assertions on every expected number |
+| Tester | First delivery 95 tests; after the rulings, 111 tests. Raised 15 questions, then 3 more |
+| Implementer | Codex started at 16:00 on the reviewed spec; the 18 questions were ruled after it started and could not reach it. Still running after more than 2 hours, about 50 files changed |
+
+Of the 18 questions, 12 were cross-cutting conventions rather than domain behavior: JSON key names of report types (twice), the exponent in a backoff formula, alert attribute names, a sentinel versus typed error, error wrapping, hook target names, a time format, a duration format, how a fault point counts, pagination parameters, and audit result values. One question exposed a real gap: an acceptance item required that a hash stay unchanged across the upgrade, but no golden value had ever been recorded; the controller computed it from the previous release's code.
+
+### 13.2 What Worked
+
+- The independent tester found 18 spec gaps before any test ran. Without it they would have surfaced as test failures or review findings after implementation, at a higher cost.
+- Asking the tester for "accept both readings" assertions where the spec was unclear kept its work moving; the assertions were tightened after the rulings.
+- Asserting every fixture number in the generator caught no errors this time, but turned a long manual cross-check into a script run.
+
+### 13.3 What to Change
+
+1. **Smaller work packages.** About 30 acceptance items at most, so that the implementer's first round fits in 1-1.5 hours. Spec size drives every later cost: each full review round re-reads the whole draft, and a large first round makes every rework round expensive.
+2. **Spec pre-read before implementation.** The tester reads the reviewed spec and lists only what it cannot assert (templates.md section 5). The controller rules, and only then are the implementer and the tester started. A Codex run takes no messages, so every ruling made after it starts adds a rework round.
+3. **A default-conventions file per project** (templates.md section 6). Most of the 18 questions would not have been asked had the project settled these details once.
+4. **Fixtures generated by Codex against a controller-written checker.** The controller states the expected numbers as assertions; Codex writes the data files.
+
+### 13.4 Operational Pitfalls Seen
+
+- Sending a message to a subagent at the moment the harness is resuming it fails with HTTP 409 ("the agent's turn is already being resumed") and stops the subagent; its files survive. Send a message only after its completion notice, and resend once if it stops this way.
+- When the Go module cache was moved off the home directory, an agent's first `go vet` downloaded the toolchain and modules from the public proxy. Point `GOMODCACHE` at the cache's real location and set `GOPROXY=off` for agents that must stay offline.
 

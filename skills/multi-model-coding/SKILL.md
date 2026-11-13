@@ -5,7 +5,7 @@ description: Orchestrates several models on a medium-to-large coding task using 
 
 # Multi-Model Coding
 
-The current session acts as the controller. The rules below come from two experiments run on 2026-11-12; data and reasoning are in [reference/paradigm.md](reference/paradigm.md).
+The current session acts as the controller. The rules below come from two experiments run on 2026-11-12 and from running work package P1.6b on 2026-11-13; data and reasoning are in [reference/paradigm.md](reference/paradigm.md).
 
 ## Scope
 
@@ -27,17 +27,20 @@ The current session acts as the controller. The rules below come from two experi
 Copy this checklist and work through it:
 
 ```
-- [ ] 1. Spec: write requirements as verifiable items; state hard limits and the unit of measurement as numbers. For exhaustive tasks, apply "Exhaustive Tasks" first.
-- [ ] 2. Task brief: use the "Task Brief" template in reference/templates.md; all implementers share one brief.
-- [ ] 3. Implementation: one git worktree and one test database per implementer; run in the background and wait only for completion notices.
-- [ ] 4. Controller acceptance: rerun the acceptance commands on an idle machine; run the tester's tests one at a time or with -shuffle=on; run tests prone to nondeterminism with -count=40.
-- [ ] 5. Blind copies: scripts/make-blind-copy.sh builds an independent clone per candidate (no other branches, neutral commit messages).
-- [ ] 6. Dual review: scripts/run-dual-review.sh runs GPT and Gemini on each copy in parallel with the same prompt.
-- [ ] 7. Merge: scripts/merge-findings.py writes both reviews as "Review X" and "Review Y" in random order and stores the mapping separately.
-- [ ] 8. Verification: dispatch one verifier per candidate using the "Verification Brief" template; spot-check the verdicts; record each reviewer's precision and unique findings.
-- [ ] 9. Rework: resume the implementer's original session; attach the full verification report, a cross-candidate checklist and one unified measurement ruling.
-- [ ] 10. Fix check: repeat steps 5-8. If P1 issues remain after two rounds, stop and decide whether the problem lies in the spec or in the implementation.
-- [ ] 11. Merge and gate: merge into the work-package branch; run the full gate while no other agent is running; update the project status file.
+- [ ] 1. Spec: write requirements as verifiable items; state hard limits and the unit of measurement as numbers. Leave cross-cutting details (JSON key names, pagination, time formats, alert attributes, error wrapping) to the project's default-conventions file instead of deciding them per package. For exhaustive tasks, apply "Exhaustive Tasks" first.
+- [ ] 2. Size check: one work package holds at most about 30 acceptance items, and the implementer should finish its first round in 1-1.5 hours. Split anything larger before review.
+- [ ] 3. Spec pre-read: the tester reads the reviewed spec and only lists what it cannot write a test for ("Spec Pre-read Brief" in reference/templates.md, about 30 minutes). The controller rules on every question and commits the rulings. Only then start steps 5 and 6.
+- [ ] 4. Fixtures and test data: the controller writes a checker that asserts the expected numbers; Codex generates the data files; the controller commits them once the checker passes.
+- [ ] 5. Task brief: use the "Task Brief" template in reference/templates.md; all implementers share one brief.
+- [ ] 6. Implementation and tests: one git worktree and one test database per implementer; the tester works in its own worktree at the same time. Run in the background and wait only for completion notices.
+- [ ] 7. Controller acceptance: rerun the acceptance commands on an idle machine; run the tester's tests one at a time or with -shuffle=on; run tests prone to nondeterminism with -count=40.
+- [ ] 8. Blind copies: scripts/make-blind-copy.sh builds an independent clone per candidate (no other branches, neutral commit messages).
+- [ ] 9. Dual review: scripts/run-dual-review.sh runs GPT and Gemini on each copy in parallel with the same prompt.
+- [ ] 10. Merge: scripts/merge-findings.py writes both reviews as "Review X" and "Review Y" in random order and stores the mapping separately.
+- [ ] 11. Verification: dispatch one verifier per candidate using the "Verification Brief" template; spot-check the verdicts; record each reviewer's precision and unique findings.
+- [ ] 12. Rework: resume the implementer's original session; attach the full verification report, a cross-candidate checklist and one unified measurement ruling.
+- [ ] 13. Fix check: repeat steps 8-11. If P1 issues remain after two rounds, stop and decide whether the problem lies in the spec or in the implementation.
+- [ ] 14. Merge and gate: merge into the work-package branch; run the full gate while no other agent is running; update the project status file.
 ```
 
 ## Hard Rules
@@ -50,6 +53,8 @@ Copy this checklist and work through it:
 6. **Build blind copies as independent clones, never as worktrees.** A worktree shares refs with the source repository: `git branch -a` reveals the implementer's branch name, and when the source repository's main moves, `git diff main HEAD` in the copy changes scope.
 7. **Restate the read-deny list and the rules in full in every task message,** including resumed sessions. Do not rely on the other agent remembering earlier constraints.
 8. **Wait for background work only through completion notices.** Do not find processes with `pgrep -f`; treat a review with a non-zero exit code as not done.
+9. **Do not start the implementer before the spec pre-read is ruled.** A Codex run cannot take messages; every ruling made after it starts costs a full rework round. In work package P1.6b the tester raised 18 questions after the implementer had started (paradigm.md section 13).
+10. **Keep work packages small.** About 30 acceptance items per package at most; a 70-item package took four hours of drafting and three full review rounds, and its first implementation round ran for hours.
 
 ## Exhaustive Tasks
 
@@ -75,7 +80,7 @@ Model substitution data (2026-11-13, one sample per model): see paradigm.md sect
 
 ## Reference Files
 
-- [reference/templates.md](reference/templates.md): task brief, review prompt, verification brief and rework brief templates.
+- [reference/templates.md](reference/templates.md): task brief, review prompt, verification brief, rework brief and spec pre-read brief templates, plus a checklist for the project's default-conventions file.
 - [reference/tooling.md](reference/tooling.md): Codex, Devin and codex-review commands, permission configs and known pitfalls.
 - [reference/paradigm.md](reference/paradigm.md): the full paradigm document with experiment data.
 - `scripts/make-blind-copy.sh`, `scripts/run-dual-review.sh`, `scripts/merge-findings.py`: run them directly; usage is in each script's header. `scripts/devin-readonly.example.json` is a sample Devin config for a read-only reviewer; `scripts/devin-verifier.example.json` is one for a verifier that may instrument its own copy.

@@ -6,8 +6,10 @@
 2. Review prompt (sent to the GPT and Gemini reviewers)
 3. Verification brief (sent to verifiers)
 4. Rework brief (sent into the implementer's original session)
+5. Spec pre-read brief (sent to the tester before implementation starts)
+6. Default-conventions checklist (one file per project)
 
-Braces mark placeholders. All four templates are the prompts actually used, and shown to work, in the 2026-11-12 experiments, with project details replaced by placeholders. Write the filled-in prompt in whatever language the project works in.
+Braces mark placeholders. Templates 1-4 are the prompts actually used, and shown to work, in the 2026-11-12 experiments; templates 5 and 6 were added after work package P1.6b (2026-11-13) and have not yet been run end to end, with project details replaced by placeholders. Write the filled-in prompt in whatever language the project works in.
 
 ---
 
@@ -164,3 +166,52 @@ Append section "{section name}" to `{delivery notes file}`: one row for each gro
 
 {the same rules as the task brief, restated in full}
 ```
+
+---
+
+## 5. Spec Pre-read Brief
+
+Send this to the tester after the spec has passed review and before the implementer starts. The goal is to surface every question the controller must rule on while the rulings can still reach the implementer's first round.
+
+```markdown
+# {work package}: spec pre-read (questions only, no tests)
+
+You will write the black-box tests for {work package} later. This round you only read the spec and list what you could not turn into a deterministic assertion. Do not write test code. Time box: about 30 minutes.
+
+## Read
+1. {spec path}, the whole document, including rulings section {N}.
+2. {default-conventions file}: anything it settles is not a question.
+3. Existing tests and test scaffolding under {paths}, to see what the test build already exposes.
+
+## List a question when
+- an acceptance item names an endpoint, hook, fault point or field whose request or response shape is not given;
+- a value can be read two ways (off-by-one in a formula, before or after an increment, per batch or cumulative, wrapped or bare error);
+- a serialized type has no stated key names, or a time, duration or cursor has no stated format;
+- an acceptance item needs a sample, hash, binary or fixture that the repository does not contain;
+- an acceptance item cannot be built at the level it names (package or binary) with the interfaces the spec provides.
+
+## Delivery
+A numbered list. Each item: the acceptance item or section, the exact text that is unclear, the readings you see, and which one you would assert. Also list the acceptance items you expect to leave uncovered and why.
+
+## Rules
+{read-deny list in full}; do not read the implementer's directory; do not commit.
+```
+
+---
+
+## 6. Default-Conventions Checklist
+
+Every project keeps one file (for example `docs/specs/conventions.md`) that settles cross-cutting details once. A spec only mentions them when it departs from the file. In work package P1.6b, more than half of the tester's 18 questions were about items on this list.
+
+| Item | What the file states |
+|---|---|
+| JSON key names | Case style for every serialized type; whether Go/TS types carry explicit tags; `omitempty` rules; empty arrays as `[]` or omitted |
+| Times and durations | Format of timestamps (for example UTC RFC 3339), dates, and durations read back from the database |
+| Pagination | Parameter names, default and maximum page size, cursor encoding, value on the last page, error for a bad cursor |
+| Errors | Error codes and the `param` format; whether errors are wrapped with `%w`; sentinel versus typed errors and how callers test them |
+| Alerts | Attribute names for consecutive count and severity; the threshold for escalation; alert body must carry the changing count |
+| Backoff and retries | Formula with the exponent stated relative to the count after the increment |
+| Audit records | Fields and the `result` values for success, conflict and rejection |
+| Test-build surface | How hooks name their target; how fault points count (per batch or cumulative); where test-only endpoints are listed |
+| Samples and golden values | Where fixed samples and their expected hashes live; who computes them |
+
