@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "permissions": {
+    "allow": [
+      "Write(/home/USER/shared/cache/go-build/**)",
+      "Write(/home/USER/shared/cache/gotmp/**)"
+    ],
+    "deny": [
+      "web_search",
+      "run_subagent",
+      "Read(/home/USER/.ssh/**)",
+      "Read(/home/USER/.kube/**)",
+      "Read(/home/USER/.codex/**)",
+      "Read(/home/USER/.claude/**)",
+      "Read(/home/USER/.config/devin/credentials.toml)",
+      "Read(/home/USER/.local/share/devin/credentials.toml)",
+      "Read(/home/USER/tmp/**)",
+      "Read(/path/to/other-project-dirs/**)",
+      "Read(/path/to/the-implementer-worktrees/**)",
+      "Read(/path/to/blind-copy/docs/spec-sources/**)"
+    ]
+  }
+}
