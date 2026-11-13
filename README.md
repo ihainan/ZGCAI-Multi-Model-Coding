@@ -17,7 +17,7 @@ ln -s "$(pwd)/skills/multi-model-coding" <project>/.claude/skills/multi-model-co
 | `skills/multi-model-coding/reference/templates.md` | Task brief, review prompt, verification brief and rework brief templates |
 | `skills/multi-model-coding/reference/tooling.md` | Codex, Devin and codex-review commands and known pitfalls |
 | `skills/multi-model-coding/reference/paradigm.md` | Full paradigm document and experiment data (an English edition of https://multi-model-paradigm.web.zgci.org) |
-| `skills/multi-model-coding/scripts/` | Scripts that build anonymous review copies, run the dual review in parallel and merge the findings, plus a sample read-only Devin config |
+| `skills/multi-model-coding/scripts/` | Scripts that build anonymous review copies, run the dual review in parallel and merge the findings, plus sample Devin configs for a read-only reviewer and for a verifier |
 
 ## Requirements
 

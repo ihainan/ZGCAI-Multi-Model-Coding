@@ -63,6 +63,8 @@ cd <worktree> && timeout 3600 devin --config <cfg.json> --model gemini-4-argon-h
 - The sandbox can write only to the working directory. Network access is not restricted, so kubeconfig, `~/.kube` and SSH private keys must be in the deny list.
 - **Implementer config:** in `permissions.allow`, grant `Edit(<worktree>/**)`, `Write(<worktree>/**)` and Write on the build cache directories by path. Never use bare `edit`/`write` without a path, which allows any path.
 - **Read-only reviewer config:** grant no workspace Edit/Write at all; see `scripts/devin-readonly.example.json`.
+- **Verifier config:** grant Edit/Write only on that verifier's own blind copy, its TMPDIR and the build caches; deny the other copies and the review materials except the findings file. See `scripts/devin-verifier.example.json`. Recommended models: `swe-2-max` (free) or `glm-5-3-high`.
+- **TMPDIR must not sit under a read-denied directory.** A verifier whose TMPDIR was under a denied path could not even list it and fell back to a temporary directory inside the repository.
 - Disable Devin's built-in `web_search` and `run_subagent` (put them in deny).
 - If the config denies reading the directory the prompt file lives in, files the prompt refers to cannot be read; inline their content into `--prompt-file`.
 - In `-p` mode stdout stays empty until the end; to check progress, look at `~/.local/share/devin/cli/logs/devin_<time>_<pid>.log`.
@@ -93,4 +95,5 @@ cd <worktree> && timeout 3600 devin --config <cfg.json> --model gemini-4-argon-h
 - **Raw Codex review output is large** (hundreds of KB of tool-call logs): extract only the final answer before merging.
 - **Test order dependence:** earlier tests in a package can warm caches so that later tests "pass in the full package, fail alone". Run the tester's tests individually or with `-shuffle=on`.
 - **Timing tests under high load:** at load 8-13 they fail intermittently and pass when rerun alone; record which ones, and do not take them as evidence of an implementation defect.
+- **Devin `--sandbox` leaves socat processes behind:** every run starts a pair of `socat` proxies (listening on `claude-http-*.sock` / `claude-socks-*.sock` under TMPDIR, or `/tmp` when TMPDIR is unset) that are reparented to init and never exit; one benchmark batch left 80 of them, and they keep the blind copies busy. After a batch, list them with `ps -eo pid=,args= | awk '$2=="/usr/bin/socat" && /<your TMPDIR>\//'` and kill those exact PIDs; do not use a broad `pkill socat`, which also kills proxies of sessions still running.
 - **Content moderation:** avoid words like "adversarial", "bypass" or "leak" in review prompts; Codex may refuse. If needed, split the prompt into parts and run them serially.

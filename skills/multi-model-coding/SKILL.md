@@ -20,7 +20,7 @@ The current session acts as the controller. The rules below come from two experi
 | Implementer | Codex (gpt-6.1-sol high, workspace-write) | Switch to an Opus subagent when the spec leaves much to the implementer's judgment |
 | Tester | An agent other than the implementer | Writes black-box tests from the same spec; measures independently of the product's own reported numbers; never reads the implementer's directory |
 | Reviewers | One GPT xhigh review (`codex-review`) and one Gemini review (Devin read-only config) | Read-only and blind; every finding gives file:line, trigger, numbers and consequence |
-| Verifier | One agent per candidate, in parallel | Reproduces each finding group and rules confirmed, partly confirmed, not confirmed or undetermined; leaves the working tree clean |
+| Verifier | Devin `swe-2-max` (free) or `glm-5-3-high`, one per candidate, in parallel (config: `scripts/devin-verifier.example.json`) | Reproduces each finding group and rules confirmed, partly confirmed, not confirmed or undetermined; leaves the working tree clean. Both scored within 1.5 of 18 against the controller's own verification at a fraction of the cost; check their "which round introduced it" calls, the weakest part for every model tested |
 
 ## Standard Workflow
 
@@ -71,9 +71,11 @@ Requirements such as "every loop is metered", "every endpoint is authenticated" 
 | Small fix (one function, one ruling) | Resume the original implementer session | One GPT fix check |
 | Comparing approaches | Several implementers in parallel | Dual review + verification; about 3x the tokens of one implementer |
 
+Model substitution data (2026-11-13, one sample per model): see paradigm.md section 12. In short: verifiers can move to SWE-2 or GLM; no cheap Devin model replaces the Gemini reviewer (only Carbon and Hydrogen match Argon, at over $4 per review); Kimi, Sonnet and DeepSeek match GPT on a single controller decision, but no model has been tested on a full controller session, so the controller stays the current session. Do not use Gemini models as controller: both recommended abandoning the candidate that ended up best.
+
 ## Reference Files
 
 - [reference/templates.md](reference/templates.md): task brief, review prompt, verification brief and rework brief templates.
 - [reference/tooling.md](reference/tooling.md): Codex, Devin and codex-review commands, permission configs and known pitfalls.
 - [reference/paradigm.md](reference/paradigm.md): the full paradigm document with experiment data.
-- `scripts/make-blind-copy.sh`, `scripts/run-dual-review.sh`, `scripts/merge-findings.py`: run them directly; usage is in each script's header. `scripts/devin-readonly.example.json` is a sample Devin config for a read-only reviewer.
+- `scripts/make-blind-copy.sh`, `scripts/run-dual-review.sh`, `scripts/merge-findings.py`: run them directly; usage is in each script's header. `scripts/devin-readonly.example.json` is a sample Devin config for a read-only reviewer; `scripts/devin-verifier.example.json` is one for a verifier that may instrument its own copy.

@@ -13,6 +13,7 @@
 9. Gate and Environment Isolation
 10. Selection Guidelines
 11. Open Questions
+12. Model Substitution Benchmark (2026-11-13)
 
 ## 1. Overview
 
@@ -116,7 +117,7 @@ For small rework, resuming is about 2.3x faster. In experiment 2 the rework scop
 | Implementer | Codex by default (gpt-6.1-sol high, workspace-write); an Opus subagent when the spec is vague and the implementer must make its own judgments; Devin (Gemini) as a third choice | Changes code per the task brief, adds self-checks, writes delivery notes | Reading denied directories; spawning subagents; committing to git |
 | Tester | An agent other than the implementer (Opus subagent) | Writes black-box tests from the same spec; measures without relying on numbers the product reports about itself | Reading the implementer's directory |
 | Reviewers | One GPT xhigh and one Gemini review | Read-only blind review giving file:line, trigger, numbers and consequence | Changing code; knowing the implementer's identity |
-| Verifiers | Opus subagents, one per candidate, in parallel | Reproduce merged findings group by group and rule confirmed, partly confirmed, not confirmed or undetermined | Leaving changes behind; `git status` must be empty when done |
+| Verifiers | Devin `swe-2-max` or `glm-5-3-high` (Opus subagents in the original experiments; see section 12), one per candidate, in parallel | Reproduce merged findings group by group and rule confirmed, partly confirmed, not confirmed or undetermined | Leaving changes behind; `git status` must be empty when done |
 
 Rationale:
 
@@ -216,3 +217,70 @@ Every time, record each reviewer's precision (confirmed plus partly confirmed ÷
 - How well section 5's "mechanism before patching" works on G118 in practice (a possible next step is to redo G118 that way).
 - Whether the cross-family dual review is as complementary on tasks that are not in Go or not spec-driven.
 - Why Gemini review time varies so widely (19-50 minutes); not yet investigated.
+- Whether Kimi, Sonnet or DeepSeek can hold a full controller session (dispatching, acceptance, merging, gate), not just a single decision (section 12).
+
+## 12. Model Substitution Benchmark (2026-11-13)
+
+Opus is the most expensive part of the paradigm, so the models in the Devin subscription were tested in the three roles Opus or Gemini held. GPT models were run through the official subscription, not Devin. All tasks were replayed from experiment 2 (work package G118):
+
+- **Review:** candidate A, round 1, on a fresh blind copy. Answer key: the eight issues the verifier confirmed (T1-T8), plus two issues nobody found in round 1.
+- **Verification:** candidate A, round 2, with the same merged findings file. Answer key: six groups, scored on verdict, measured magnitude and which round introduced the issue (3 points each, 18 total).
+- **Controller decision:** given the three round-1 verification reports, decide what to do and write the rework brief (16 points); given the three round-2 reports, decide whether to merge or start round 3 (6 points).
+
+Limits: one sample per model and role; the answer keys come from Opus's own verification and briefs, and Opus did the scoring, so the scale favors Opus's way of judging; the controller test covers one decision, not a full session.
+
+### 12.1 Verification (out of 18)
+
+| Model | Score | Time | Cost |
+|---|---|---|---|
+| gemini-4-carbon-high | 17 | 17 min | $3.08 |
+| glm-5-3-high | 16.5 | 7 min | $1.30 |
+| swe-2-max | 16.5 | 11 min | free |
+| gpt-6.1-sol high (Codex) | 16 | 11 min | subscription |
+| claude-sonnet-5-5-high | 15.5 | 6 min | $0.91 |
+| kimi-k3-1-pro-high | 15.5 | 7 min | $1.37 |
+| deepseek-v4-pro-high | 15.5 | 19 min | $1.62 |
+
+No model ruled a real issue "not confirmed". Points were lost almost entirely on "which round introduced it": most models labelled round-1 issues as pre-existing on main.
+
+### 12.2 Review (out of 8)
+
+| Model | Score | Time | Cost |
+|---|---|---|---|
+| gpt-6.1-sol xhigh (baseline) | 5 | - | subscription |
+| gemini-4-carbon-high | 5 | 43 min | $4.22 |
+| gemini-4-hydrogen-xhigh | 4.5 | 26 min | $4.26 |
+| gemini-4-argon-high (baseline) | 4 | - | - |
+| kimi-k3-1-pro-high | 3 | 5 min | $1.00 |
+| claude-sonnet-5-5-high | 3 | 14 min | $1.52 |
+| swe-2-max | 3 | 24 min | free |
+| glm-5-3-high | 1 | 14 min | $2.20 |
+| deepseek-v4-pro-high | 0 | 17 min | $1.34 |
+| grok-4-7-high | 0 | 31 min | $8.52 |
+
+GLM and DeepSeek declared several real violations "within the limit". Grok's only finding rested on a simulated hash collision it could not build from real input.
+
+### 12.3 Controller Decision (out of 22)
+
+| Model | Round 1 (16) | Round 2 (6) | Total | Cost |
+|---|---|---|---|---|
+| kimi-k3-1-pro-high | 16 | 6 | 22 | $0.34 |
+| gpt-6-astra high | 15.5 | 6 | 21.5 | subscription |
+| claude-sonnet-5-5-high | 16 | 5 | 21 | $0.42 |
+| deepseek-v4-pro-high | 16 | 5 | 21 | $0.20 |
+| gpt-6.1-sol xhigh | 15 | 6 | 21 | subscription |
+| glm-5-3-high | 15 | 5 | 20 | $0.28 |
+| grok-4-7-high | 15 | 5 | 20 | $0.19 |
+| swe-2-max | 14.5 | 5 | 19.5 | free |
+| gemini-4-hydrogen-high | 14 | 5.5 | 19.5 | $0.32 |
+| gemini-4-carbon-high | 14 | 4.5 | 18.5 | $0.75 |
+
+Both Gemini models recommended abandoning candidate B, which ended up the cleanest of the three. In round 2, almost every model missed that the roughly 10,000 operations after cancellation are a separate "stop after cancel" issue, not a violation of the interval limit.
+
+### 12.4 Conclusions
+
+- **Verifier:** move to `swe-2-max` (free) or `glm-5-3-high` (fastest). The controller spot-checks the "which round introduced it" column.
+- **Reviewer:** keep GPT xhigh plus one Gemini review. Only Carbon and Hydrogen reach Argon's level, at over $4 and 26-43 minutes per review; the cheaper models miss too much.
+- **Controller:** Kimi, Sonnet and DeepSeek match GPT on a single decision for well under a dollar, but a full controller session has not been tested; keep the current session as controller until it has. Do not use Gemini models as controller.
+- **Reviewing well and deciding well are different skills:** DeepSeek and Kimi were among the weakest reviewers and among the best controllers.
+
