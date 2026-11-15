@@ -33,7 +33,7 @@ Copy this checklist and work through it:
 - [ ] 4. Fixtures and test data: the controller writes a checker that asserts the expected numbers; Codex generates the data files; the controller commits them once the checker passes.
 - [ ] 5. Task brief: use the "Task Brief" template in reference/templates.md; all implementers share one brief.
 - [ ] 6. Implementation and tests: one git worktree and one test database per implementer; the tester works in its own worktree at the same time. Run in the background and wait only for completion notices.
-- [ ] 7. Controller acceptance: rerun the acceptance commands on an idle machine; run the tester's tests one at a time or with -shuffle=on; run tests prone to nondeterminism with -count=40.
+- [ ] 7. Controller acceptance: rerun the acceptance commands on an idle machine; run the tester's tests one at a time or with -shuffle=on; run tests prone to nondeterminism with -count=40; run write-then-read sequences against the real server and walk through the UI (hard rule 12).
 - [ ] 8. Blind copies: scripts/make-blind-copy.sh builds an independent clone per candidate (no other branches, neutral commit messages).
 - [ ] 9. Dual review: scripts/run-dual-review.sh runs GPT and Gemini on each copy in parallel with the same prompt.
 - [ ] 10. Merge: scripts/merge-findings.py writes both reviews as "Review X" and "Review Y" in random order and stores the mapping separately.
@@ -56,6 +56,7 @@ Copy this checklist and work through it:
 9. **Do not start the implementer before the spec pre-read is ruled.** A Codex run cannot take messages; every ruling made after it starts costs a full rework round. In work package P1.6b the tester raised 18 questions after the implementer had started (paradigm.md section 13).
 10. **Keep work packages small.** About 30 acceptance items per package at most; a 70-item package took four hours of drafting and three full review rounds, and its first implementation round ran for hours.
 11. **Accept on the whole repository's tests, after merging current main.** A package's own tests and its tester's tests both missed a start-order regression that only older binary tests caught (paradigm.md section 13.5).
+12. **Acceptance includes the real server, not only in-process test clients.** In-process clients (FastAPI/Starlette `TestClient`, Go handlers called through `httptest.ResponseRecorder`) wait for request teardown before returning, so they hide defects where work such as the database commit runs after the response is sent. In the ZGCAI-Blog P1.2a acceptance (2026-11-15), about 80% of "log in, then immediately call `/api/me`" requests got 401 on a real uvicorn server, while 594 tests, two reviewers and the implementer's own browser check had all passed. Every controller acceptance runs write-then-immediately-read sequences against the real server with an independent HTTP client, plus a browser walk-through.
 
 ## Exhaustive Tasks
 
