@@ -15,6 +15,7 @@
 11. Open Questions
 12. Model Substitution Benchmark (2026-11-13)
 13. Observations from Work Package P1.6b (2026-11-13)
+14. Observations from Work Package P1.7b (2026-11-15)
 
 ## 1. Overview
 
@@ -345,4 +346,27 @@ P1.6b merged on 2026-11-14 after three implementer rounds (the third an extra, t
 3. **Verification briefs say how to reach the database from the sandbox** and forbid starting containers.
 4. **Rework briefs separate the symptom from the controller's hypothesis** and invite the recipient to refute the hypothesis.
 5. **A gate script that stops at the first failed stage hides later stages.** When the unit stage fails on a known timing flake, still run the binary stage, so one pass gives the full picture.
+
+## 14. Observations from Work Package P1.7b (2026-11-15)
+
+P1.7b (background maintenance for captured request bodies: sweeping rows left by crashes, recomputing request-level status, retention deletes, a lease table shared by several workers) was the first package sized under the 30-item limit of section 13.3 and run with the pre-read step.
+
+| Stage | Measured |
+|---|---|
+| Spec | Eight versions, 29 acceptance items. Four full GPT xhigh + Gemini rounds: P1 findings 13, 5, 1, 1 |
+| Targeted recheck | A GPT high pass over only the last version's changes found 2 more P1s (a stale worker could still delete one row after losing its lease; a failed first configuration load fell back to default settings and would have deleted data under the default retention) |
+| Pre-read | The tester raised 20 questions before implementation; all were ruled before Codex started |
+| Implementation | One Codex round; the tester wrote 54 test functions covering all 29 items |
+| Merge | 2 failures, both test mistakes |
+| Code review | Two scopes, GPT xhigh + Gemini each, no P1; one rework round fixed 6 small issues |
+| Gate | Passed on the first run |
+
+### 14.1 What to Keep
+
+- **Always run a targeted recheck after the last full round.** Full rounds converge on the parts reviewers have already read; the recheck reads only the latest diff and found two data-loss issues after the full rounds reported one or zero P1s.
+- **State guarantees at the strength the mechanism actually has.** Both recheck findings were over-claims: the spec promised that a worker stops immediately after losing its lease, but object deletes run outside the database and cannot be fenced. The fix was to write the real contract (at most one more row) and add an acceptance item for it.
+
+### 14.2 What to Change
+
+- **The controller can mis-rule a pre-read question.** One ruling contradicted an existing framework rule (publishing while an older replica is online). The implementer followed it and added a special case to the shared framework. It was caught only by reading the implementer's trade-off notes after the merge. When a ruling touches behavior defined by an earlier package, cite that package's rule in the ruling; after every merge, check each trade-off the implementer reports against the existing rules before accepting it.
 
