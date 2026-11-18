@@ -180,3 +180,6 @@ P1.8d fixcheck_new_issues: 1 — docs/specs/interfaces/P1.8d.md:302 '另提 1 �
 P1.8d gate_real_failures: 1 — docs/specs/interfaces/P1.8d.md:322 'G1 … 测试问题，第 2.6 节漏列' (5 tests in 4 packages, one cause)
 P1.8d gate_flaky_or_load_failures: 2 — docs/specs/interfaces/P1.8d.md:324 '`TestIngressPerformance_P18a`…与 `TestRootIDPerformance_P18b` 在负载 7～10 时超出门槛…判定为负载造成的测量波动'
 P1.8d notes (code review P1 left empty) — docs/reviews/code-P1.8d.md:20 'GPT 1 项 P1（工具名集合无界，定为 P2）…Gemini 1 项 P1（`speed: null`，同 M1）' (the ruling for N5 at P1.8d.md:298 gives no severity)
+
+## P1.9a (recorded at close-out, 2026-11-18, by the controller)
+P1.9a: all numbers from docs/specs/interfaces/P1.9a.md section 11 (11.1-11.9), docs/reviews/code-P1.9a.md and the controller's session. spec_review_p1_total = round 1 GPT 6 (Gemini did not run: provider outage) + round 2 GPT 5 + Gemini 3 + targeted recheck 1. merge_failures_* count the first stage-A merge run M1-M8 (M2 split spec/self-test counted as spec; M8 ended as a self-test change, counted under test is not applied: left out). code_review_p1 = N1, N2, BN1 kept as P1. fixcheck_new_issues = F1-F4, BC1-BC3. gate_flaky_or_load_failures = MB3, MB4 (known p18b excluded).
