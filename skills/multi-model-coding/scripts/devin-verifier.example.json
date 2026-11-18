@@ -4,9 +4,9 @@
     "allow": [
       "Edit(/path/to/blind-copy-for-this-verifier/**)",
       "Write(/path/to/blind-copy-for-this-verifier/**)",
-      "Write(/home/USER/shared/cache/go-build/**)",
-      "Write(/home/USER/shared/cache/gotmp/**)",
-      "Write(/home/USER/go/pkg/mod/**)",
+      "Write(/path/to/build-cache/**)",
+      "Write(/path/to/build-tmp/**)",
+      "Write(/path/to/package-cache/**)",
       "Write(/path/to/verifier-tmpdir/**)"
     ],
     "deny": [

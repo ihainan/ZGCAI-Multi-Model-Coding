@@ -2,8 +2,8 @@
   "version": 1,
   "permissions": {
     "allow": [
-      "Write(/home/USER/shared/cache/go-build/**)",
-      "Write(/home/USER/shared/cache/gotmp/**)"
+      "Write(/path/to/build-cache/**)",
+      "Write(/path/to/build-tmp/**)"
     ],
     "deny": [
       "web_search",
@@ -14,7 +14,7 @@
       "Read(/home/USER/.claude/**)",
       "Read(/home/USER/.config/devin/credentials.toml)",
       "Read(/home/USER/.local/share/devin/credentials.toml)",
-      "Read(/home/USER/tmp/**)",
+      "Read(/path/to/controller-workspace/**)",
       "Read(/path/to/other-project-dirs/**)",
       "Read(/path/to/the-implementer-worktrees/**)",
       "Read(/path/to/blind-copy/docs/spec-sources/**)"

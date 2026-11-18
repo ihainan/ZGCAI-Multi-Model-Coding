@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# codex-review — run one read-only Codex review with fixed input handling,
+# a start-up check, a time limit and meaningful exit codes.
+#
+# Usage:
+#   codex-review [-e high|xhigh] [-m model] [-t seconds] -o <out-file> "<prompt>"
+#
+# Why it exists: a bare `codex exec` started in the background can wait for
+# ever on "Reading additional input from stdin...", and waiting on it by
+# searching for the process (pgrep -f) matches the watcher itself or another
+# session's Codex. This wrapper therefore:
+#   - connects stdin to /dev/null;
+#   - exits 3 when no "session id:" line appears within START_WAIT seconds
+#     (default 90): Codex never started;
+#   - exits 124 when the whole run exceeds -t seconds (default 1500);
+#   - otherwise exits with Codex's own exit code;
+#   - prints only the final answer and the exit code; the full log stays in
+#     <out-file>.
+# Any non-zero exit means the review did not happen.
+#
+# Environment: CODEX_BIN (default codex), START_WAIT (default 90).
+set -uo pipefail
+
+effort=high
+model=gpt-6.1-sol
+limit=1500
+out=""
+while getopts "e:m:t:o:" opt; do
+  case $opt in
+    e) effort=$OPTARG ;;
+    m) model=$OPTARG ;;
+    t) limit=$OPTARG ;;
+    o) out=$OPTARG ;;
+    *) exit 2 ;;
+  esac
+done
+shift $((OPTIND - 1))
+if [ -z "$out" ] || [ $# -lt 1 ]; then
+  sed -n '2,22p' "$0" >&2
+  exit 2
+fi
+codex=${CODEX_BIN:-codex}
+start_wait=${START_WAIT:-90}
+
+timeout "$limit" "$codex" exec -m "$model" -c model_reasoning_effort="$effort" -s read-only "$*" \
+  </dev/null >"$out" 2>&1 &
+pid=$!
+
+started=""
+waited=0
+while [ "$waited" -lt "$start_wait" ]; do
+  if grep -q '^session id:' "$out" 2>/dev/null; then started=1; break; fi
+  kill -0 "$pid" 2>/dev/null || break
+  sleep 2
+  waited=$((waited + 2))
+done
+grep -q '^session id:' "$out" 2>/dev/null && started=1
+if [ -z "$started" ] && kill -0 "$pid" 2>/dev/null; then
+  kill "$pid" 2>/dev/null
+  wait "$pid" 2>/dev/null
+  echo "[codex-review] no 'session id:' within ${start_wait}s; stopped. First lines of the output:"
+  head -5 "$out"
+  echo "[codex-review] exit=3 full output: $out"
+  exit 3
+fi
+
+wait "$pid"
+rc=$?
+[ "$rc" -eq 124 ] && echo "[codex-review] exceeded ${limit}s; stopped"
+if grep -q '^tokens used' "$out"; then
+  # The final answer follows the last "tokens used" line and its count line.
+  awk '/^tokens used/ { f = 1; buf = ""; next } f == 1 { f = 2; next } f == 2 { buf = buf $0 "\n" } END { printf "%s", buf }' "$out"
+else
+  echo "[codex-review] no final answer; last lines of the output:"
+  tail -20 "$out"
+fi
+echo "[codex-review] exit=$rc full output: $out"
+exit "$rc"

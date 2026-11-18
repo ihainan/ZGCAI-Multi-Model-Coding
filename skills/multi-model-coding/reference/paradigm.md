@@ -16,10 +16,11 @@
 12. Model Substitution Benchmark (2026-11-13)
 13. Observations from Work Package P1.6b (2026-11-13)
 14. Observations from Work Package P1.7b (2026-11-15)
+15. Observations from Work Packages P1.8d and P1.9a (2026-11-16)
 
 ## 1. Overview
 
-**Conclusion**: Claude acts as controller and owns the spec, rulings, verification and acceptance. Implementation goes to Codex (gpt-6.1-sol high) by default. Every review round is done blind by **two model families, GPT and Gemini**, and findings are **verified by measurement** before rework. Rework resumes the implementer's original session. In two experiments this approach matched the quality of "Opus implements + GPT reviews" and was about 1.8x faster in the first implementation round. Two limitations apply. First, for exhaustive tasks such as "every loop must stay within the limit", review and rework rounds do not converge, so the check must first become a mechanism. Second, the tester's tests must run individually or in shuffled order, or defects that depend on test order are missed.
+**Conclusion**: Claude acts as controller and owns the spec, rulings, verification and acceptance. Implementation goes to Codex (gpt-6.1-sol high) by default. Every review round is done blind by **two model families, GPT and Gemini**, and findings are **verified by measurement** before rework. Rework resumes the implementer's original session. In two experiments on one Go code base this approach matched the quality of "Opus implements + GPT reviews" and was about 1.8x faster in the first implementation round. Two limitations apply. First, for exhaustive tasks such as "every loop must stay within the limit", review and rework rounds do not converge, so the check must first become a mechanism. Second, the tester's tests must run individually or in shuffled order, or defects that depend on test order are missed.
 
 Project terms used in this document:
 
@@ -97,12 +98,19 @@ Key points:
 
 Key points:
 
-1. **The two reviewers' findings overlap very little.** Across both rounds there were 24 limit violations: 7 found by both, 5 by GPT only and 12 by Gemini only. GPT alone finds 50%, Gemini alone 79%; only the two together find all of them.
-2. **Same-family blind spot**: GPT missed the nondeterminism Codex introduced in round 1; Gemini found it and identified the correct root cause.
+1. **The two reviewers' findings overlapped little on this task.** Across both rounds there were 24 limit violations: 7 found by both, 5 by GPT only and 12 by Gemini only. Of those found, GPT alone found 50% and Gemini alone 79% (shares of the found set; see 2.6).
+2. **A possible same-family blind spot** (one instance): GPT missed the nondeterminism Codex introduced in round 1; Gemini found it and identified the correct root cause.
 3. GPT's severity judgments and numbers are accurate, and it is about twice as fast. Gemini has higher recall, but its numbers are often inflated or its constructions do not reproduce as written, and once it marked an unfixed issue as fixed, so its findings must be verified.
 4. The defect where an Opus tester test "always fails alone, passes in the full package run" was missed by controller acceptance, both round-1 reviews and the verifier; GPT found it in round 2 by running that test on its own.
 
-### 2.6 Session Resumption (Experiment 1)
+### 2.6 Limits of the Evidence
+
+- Both experiments used one Go code base and, for the reviewer comparison, one task (G118) with three candidates over two rounds. The model substitution benchmark (section 12) has one sample per model and role.
+- Answer keys, verifications and scores came from the controller (Opus) itself.
+- "GPT alone 50%, Gemini alone 79%" is each reviewer's share of the violations the whole process found, not recall against all real defects; issues no one found are not in the denominator.
+- So the data supports "cross-family dual review plus independent verification found clearly more than either reviewer alone, here". It does not establish a stable ranking of models or a general same-family blind spot. Section 11 lists what is still open.
+
+### 2.7 Session Resumption (Experiment 1)
 
 | Round | Method | Size | Time |
 |---|---|---|---|
@@ -115,7 +123,7 @@ For small rework, resuming is about 2.3x faster. In experiment 2 the rework scop
 
 | Role | Assigned to | Responsibilities | Prohibited |
 |---|---|---|---|
-| Controller | Claude (Opus, main session) | Writes the spec and rulings; writes the task brief; runs the gate; merges review findings; rules on verification results; decides rework scope; merges code | Running the full gate while other agents are running |
+| Controller | Claude (Opus, main session) | Writes the spec and rulings; writes the task brief; runs acceptance; merges review findings; rules on verification results; decides rework scope; merges code | Writing the product code itself |
 | Implementer | Codex by default (gpt-6.1-sol high, workspace-write); an Opus subagent when the spec is vague and the implementer must make its own judgments; Devin (Gemini) as a third choice | Changes code per the task brief, adds self-checks, writes delivery notes | Reading denied directories; spawning subagents; committing to git |
 | Tester | An agent other than the implementer (Opus subagent) | Writes black-box tests from the same spec; measures without relying on numbers the product reports about itself | Reading the implementer's directory |
 | Reviewers | One GPT xhigh and one Gemini review | Read-only blind review giving file:line, trigger, numbers and consequence | Changing code; knowing the implementer's identity |
@@ -136,12 +144,12 @@ Rationale:
 | 1b. Spec pre-read | The tester lists only what it cannot assert (templates.md section 5); the controller rules before anyone starts | Rulings | about 30 min + rulings |
 | 2. Task brief | Write it from the section 6 structure; all implementers share one brief | Task brief file | 10 min |
 | 3. Implementation | Implementers work in separate worktrees, the tester in its own; run several implementers in parallel when comparing approaches | Change + tests + delivery notes | 50-90 min |
-| 4. Controller acceptance | Rerun the acceptance commands on an idle machine; run the tester's tests one by one or with `-shuffle=on`; add `-count=40` runs for tests prone to nondeterminism | Acceptance record | 10-20 min |
+| 4. Controller acceptance | Rerun the acceptance commands where the project's environment profile says; run the tester's tests one by one or in random order; repeat tests prone to nondeterminism many times | Acceptance record | 10-20 min |
 | 5. Cross-family dual review | Copy each candidate into an anonymous read-only copy with neutral commit messages; GPT and Gemini review in parallel with the same prompt | Two reviews | 10-50 min |
 | 6. Verification | Merge each candidate's two reviews into one file without sources; verifiers reproduce them group by group | Verification report | 7-12 min |
 | 7. Rework | Resume the implementer's original session; attach the verification report and the cross-candidate checklist; the controller rules on one unified unit of measurement | Fixes + regression self-checks | 30-60 min |
 | 8. Fix check | Dual review and verification again; if P1 issues remain, the controller decides whether the problem is in the implementation or the spec, and spec problems go back to stage 1 | Fix-check record | 20-45 min |
-| 9. Merge and gate | Merge into the work-package branch and run the full gate while no agent is running | Gate record, STATUS update | 30-45 min |
+| 9. Merge and full acceptance | Merge current main and run the whole repository's suite as the environment profile prescribes | Acceptance record, status update | project-dependent |
 
 In experiment 2, end to end from the start of implementation to the end of round-2 verification took about 4 h 45 min (three implementers in parallel). Codex's implementation and rework took about 1.8 h of that; the rest was acceptance, review and verification.
 
@@ -176,7 +184,7 @@ Fill-in templates are in [templates.md](templates.md).
 - Copy each candidate into anonymous copies `rv-A`, `rv-B`, `rv-C` on a detached HEAD, with neutral commit messages. Build them as independent clones, not worktrees (see `scripts/make-blind-copy.sh`).
 - The review prompt embeds the full task brief and requires every finding to give P1/P2/P3, file:line, trigger, measured or estimated numbers, and consequence.
 - Reviewers must be read-only: Codex via `codex-review`; Devin with a config that grants no workspace Edit/Write.
-- GPT and Gemini run in parallel and each reviews every candidate. Fix-check rounds use the dual review as well.
+- GPT and Gemini run in parallel and each reviews every candidate. A fix check of a rework that stayed within the confirmed issues may use one reviewer; a broader rework gets the dual review again (SKILL.md hard rule 2).
 
 ### 7.2 Verification
 
@@ -187,7 +195,7 @@ Fill-in templates are in [templates.md](templates.md).
 
 ### 7.3 Review Quality Tracking
 
-Every time, record each reviewer's precision (confirmed plus partly confirmed ÷ reported) and number of unique findings. Across both rounds of experiment 2, GPT alone would have missed half of the limit violations and Gemini alone about one fifth, and GPT's unique findings were often the most severe ones (425,984 in round 1, the test-order dependence in round 2). Do not switch to a single reviewer.
+Every time, record each reviewer's precision (confirmed plus partly confirmed ÷ reported) and number of unique findings. Across both rounds of experiment 2, GPT alone would have missed half of the limit violations and Gemini alone about one fifth, and GPT's unique findings were often the most severe ones (425,984 in round 1, the test-order dependence in round 2). Do not drop to a single reviewer for spec or code reviews.
 
 ## 8. Rework and Session Resumption
 
@@ -196,11 +204,11 @@ Every time, record each reviewer's precision (confirmed plus partly confirmed ÷
 - **Cross-candidate checklist**: issues confirmed by measurement on any candidate are collected into a checklist sent to every implementer, each item requiring "fix it if present, otherwise give the code location".
 - The controller rules on one unified unit of measurement in the rework brief, so implementers cannot claim "within the limit" by their own unit.
 
-## 9. Gate and Environment Isolation
+## 9. Environment Isolation
 
-- Run the full gate only when no implementer, reviewer or verifier is running. In the experiments, 5 timing tests failed at machine load 8-13 and all passed when rerun alone.
+- Where the full suite and timing-sensitive runs execute is a project decision, recorded in its environment profile (templates.md section 7), not a rule of this paradigm. The observation behind it: in the experiments, 5 timing tests failed at machine load 8-13 and all passed when rerun alone; in section 15, a busy machine produced a false performance regression.
 - Each implementer uses its own git worktree and its own test database.
-- Put large temporary files on a data disk: point `GOTMPDIR` and `TMPDIR` at a data-disk cache directory, and allow the same directories in the Codex sandbox's `writable_roots`.
+- Temporary and cache directories come from the profile; allow the same directories in the Codex sandbox's `writable_roots`.
 - Devin permissions: grant edits only by path, to this round's worktree; deny reading other worktrees, spec sources and prototype directories. In headless mode stdout shows no progress; check the logs under `~/.local/share/devin/cli/logs/` to see whether it is advancing.
 - Always run Codex reviews in the background through `codex-review` and wait only for completion notices; treat any non-zero exit code as "not reviewed".
 
@@ -210,7 +218,7 @@ Every time, record each reviewer's precision (confirmed plus partly confirmed ÷
 |---|---|---|---|
 | Medium change with a clear spec | Codex high | GPT xhigh + Gemini, verify, then rework | Default combination |
 | Implementer must make many judgment calls | Opus subagent | GPT xhigh + Gemini | First round about 1.8x slower, rework faster; run the tester's tests individually during acceptance |
-| Concurrency, security, billing, migrations | Codex high or Opus | GPT xhigh + Gemini, plus `-count` and `-shuffle=on` runs | Only the cross-family review caught the nondeterminism |
+| Concurrency, security, billing, migrations | Codex high or Opus | GPT xhigh + Gemini, plus repeated and random-order test runs | Only the cross-family review caught the nondeterminism |
 | Exhaustive requirement (every loop, every endpoint) | Mechanism and inventory first, per section 5 | Dual review of the inventory as well | Direct patching does not converge |
 | Small fix (one function, one ruling) | Resume the original implementer session | One GPT check | Resuming is about 2.3x faster |
 | Comparing approaches, picking the best implementation | Several in parallel | Dual review + verification | About 3x the tokens of one implementer; use only when approaches differ widely |
@@ -370,3 +378,15 @@ P1.7b (background maintenance for captured request bodies: sweeping rows left by
 
 - **The controller can mis-rule a pre-read question.** One ruling contradicted an existing framework rule (publishing while an older replica is online). The implementer followed it and added a special case to the shared framework. It was caught only by reading the implementer's trade-off notes after the merge. When a ruling touches behavior defined by an earlier package, cite that package's rule in the ruling; after every merge, check each trade-off the implementer reports against the existing rules before accepting it.
 
+## 15. Observations from Work Packages P1.8d and P1.9a (2026-11-16)
+
+P1.8d (service tiers and upstream tool counts for the model gateway, with a config schema bump) and the spec of P1.9a (an observability baseline: a metrics package, data-plane and background-job metrics, alert rules) ran through the workflow on one machine shared with many other sessions.
+
+| What happened | Cost | Change adopted |
+|---|---|---|
+| The full suite ran on the shared development machine at load 8-14. An ingress latency test failed three times against an older release, and the package was suspected of adding about 1 ms per request. A controlled A/B rerun (main and the package alternately, three pairs) showed both sides moving between -2.3 and +1.4 ms with no direction | Several hours; two background jobs were stopped by the harness for low memory | Where heavy and timing-sensitive runs go became an environment-profile item; the project moved them to a dedicated build machine with a one-job-at-a-time queue |
+| The schema bump made four older "old binary reads new config" tests fail; the spec's allowed-test-changes list had omitted them | One extra implementer round | Spec step: list every test that runs an older release against the new format |
+| While fixing those tests, the implementer also changed an unrelated test's Redis database number; the controller found it by reading the diff | Caught by luck | `scripts/check-scope.sh` on every delivery |
+| The P1.9a spec grew to 37 acceptance items and six versions (21 + 21 review findings, 7 recheck findings, 33 pre-read questions). Splitting the implementation into two stages did not reduce the spec rounds | About a day of spec work | Split at drafting when the draft passes about 30 items |
+| A Gemini review failed (provider outage). A retry with the same output prefix would still have reported failure, because the dual-review script appended exit codes to one file and searched its whole history; the error text sat in the answer file, which the merge script accepted as long as it was non-empty | Worked around by hand | Per-reviewer status files rewritten on each run; stdout and stderr kept apart; the merge script refuses a review whose run did not succeed; `REVIEWERS=` reruns one reviewer; regression tests with fake tools |
+| A test failed every time on the new build machine and passed on the development machine: it advanced an injected clock and sent a request before a once-per-second refresh, a race the slower machine happened to win | None once found, but the controller had to remember it at every ruling | Known failures are a versioned list in the project with cause and owner; the full-suite run marks hits as known |

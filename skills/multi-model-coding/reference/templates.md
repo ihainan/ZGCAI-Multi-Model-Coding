@@ -8,8 +8,9 @@
 4. Rework brief (sent into the implementer's original session)
 5. Spec pre-read brief (sent to the tester before implementation starts)
 6. Default-conventions checklist (one file per project)
+7. Environment profile (one file per project)
 
-Braces mark placeholders. Templates 1-4 are the prompts actually used, and shown to work, in the 2026-11-12 experiments; templates 5 and 6 were added after work package P1.6b (2026-11-13) and have not yet been run end to end, with project details replaced by placeholders. Write the filled-in prompt in whatever language the project works in.
+Braces mark placeholders. Templates 1-4 are the prompts actually used, and shown to work, in the 2026-11-12 experiments; templates 5 and 6 were added after work package P1.6b (2026-11-13) and have been used on later packages; template 7 was added on 2026-11-18. Project details are replaced by placeholders; fill the resource and environment placeholders from the project's environment profile. Write the filled-in prompt in whatever language the project works in.
 
 ---
 
@@ -35,7 +36,8 @@ You are the implementer for {repository}. This round covers only: {scope}. Worki
 
 - {Behavior and results that must not change}.
 - The tester's tests `{file pattern}` must not be modified and must still pass.
-- The performance gate `{test name}` must still pass.
+- {Performance checks from the environment profile, if any} must still pass.
+- Existing tests may be changed only as the spec's allowed-changes list says.
 
 ## Self-Check Requirements
 
@@ -50,8 +52,8 @@ Run these in order and confirm they pass before delivery:
 - `{static analysis}`
 - `{unit tests}`
 - `{tests with the race detector or observability tags}`
-- `{tests prone to nondeterminism} -count=40`
-- `{tester's tests} -shuffle=on` (or run each one on its own)
+- `{tests prone to nondeterminism}`, repeated `{N}` times
+- `{tester's tests}` in random order (or each one on its own)
 
 ## Delivery
 
@@ -62,7 +64,8 @@ Append a table to section "{section name}" of `{delivery notes file}` with the c
 - Clean room: do not read {read-deny list}; do not read any other project directory outside this one.
 - Do not spawn subagents, do not search the web, do not add dependencies.
 - Do not commit to git or change git configuration; modify only {allowed paths}.
-- Other agents are running on this machine: while iterating, run only the relevant tests, not `make` targets. Put temporary files in `{TMPDIR}`, never in `/tmp`.
+- {Resource rules from the environment profile: which test runs are allowed while iterating, temporary and cache directories, test database}.
+- Do not run anything on shared machines named in the profile; the controller runs the full suite and performance checks.
 - Write code comments in {language}.
 ```
 
@@ -71,7 +74,7 @@ Append a table to section "{section name}" of `{delivery notes file}` with the c
 GPT and Gemini receive the same prompt. It embeds the full task brief, because the reviewers' configs may deny reading the directory the brief lives in.
 
 ```markdown
-You are a code reviewer for this {language} repository ({one-line project description}). Read-only: do not modify, create or delete any file, and do not commit to git. You may run read-only commands and targeted tests (only the relevant individual tests; do not run whole packages with -race).
+You are a code reviewer for this {language} repository ({one-line project description}). Read-only: do not modify, create or delete any file, and do not commit to git. You may run read-only commands and targeted tests (only the relevant individual tests; {resource rules from the environment profile}).
 
 Review the change at the current HEAD relative to {baseline}: `git diff {baseline} HEAD` (touching only `{paths}`). The author of the change received this task brief:
 
@@ -120,7 +123,7 @@ You are a **verifier**. Your job is to reproduce, one by one, the review finding
 - Clean room: {read-deny list}; under `{review materials directory}` read only the findings file above.
 - Do not spawn subagents, do not use the network, do not commit to git.
 - Database access: {how to reach the test database from your sandbox}. Do not start containers or proxies of your own.
-- Other verifiers are running on this machine: run only your own targeted tests, not whole packages with race or `make` targets. Put temporary files in `{TMPDIR}`.
+- {Resource rules from the environment profile}; run only your own targeted tests. Put temporary files in `{TMPDIR}`.
 - Before finishing, delete every `zz_verify_*` file and revert all instrumentation; `git status --short` must print nothing.
 - Time budget is about 45 minutes; if one group takes far too long, mark it "undetermined" and explain.
 
@@ -215,4 +218,22 @@ Every project keeps one file (for example `docs/specs/conventions.md`) that sett
 | Audit records | Fields and the `result` values for success, conflict and rejection |
 | Test-build surface | How hooks name their target; how fault points count (per batch or cumulative); where test-only endpoints are listed |
 | Samples and golden values | Where fixed samples and their expected hashes live; who computes them |
+
+---
+
+## 7. Environment Profile
+
+Every project keeps one file (its `CLAUDE.md`, or a file it points to) with everything this skill leaves to the project. The controller reads it before step 1 and copies the relevant lines into every brief; agents never have to guess them.
+
+| Item | What the profile states |
+|---|---|
+| Full acceptance suite | The exact command(s) for the whole repository's tests, static checks and license or provenance scans; which steps must pass and which only report |
+| Where heavy runs execute | Where the full suite, performance checks and other timing-sensitive runs execute (a dedicated build machine, a CI job, the local machine when idle), how to submit a job there and how to read its result. Results from a contended machine are not evidence for or against a performance regression |
+| Performance checks | Which tests compare against a baseline, how the baseline is chosen (a release tag), and how to rule when one fails |
+| Known failures | A versioned list of tests known to fail or flake, each with its cause, the environment where it fails and the package or ticket that will fix it. The full-suite run marks hits as known instead of hiding them; a known failure that stops failing is removed |
+| Resources for agents | What implementers, testers, reviewers and verifiers may run while iterating; temporary and cache directories (and the sandbox write paths they need); memory or load limits before starting a large job |
+| Test services | One database (or schema) per agent and how to create it; Redis or other service namespaces per agent; how a sandboxed agent reaches them; never start containers of its own |
+| Read-deny list | Directories no implementer, tester or reviewer may read (other worktrees, legacy code, spec sources, credentials), restated in every brief |
+| Repository rules | Branch and commit conventions, what agents may not modify (status file, specs), the language for comments and documents |
+| Close-out | What the controller updates after a package merges (status file, tags, external progress pages) |
 
