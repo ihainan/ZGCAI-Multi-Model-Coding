@@ -46,6 +46,7 @@ Copy this checklist and work through it:
 - [ ] 14. Rework: resume the implementer's original session; attach the full verification report, a cross-candidate checklist and one unified measurement ruling (template 4).
 - [ ] 15. Fix check: when the rework stayed within the confirmed issues, one reviewer checks them and the rework diff; when it changed more (new logic, many files), repeat steps 10-13. If P1 issues remain after two rounds, stop and decide whether the problem lies in the spec or in the implementation.
 - [ ] 16. Merge and full acceptance: merge current main, run the project's full acceptance suite as the profile prescribes, rule on every failure (known failures listed in the profile are marked, not ignored), then close out per the project's own rules.
+- [ ] 17. Retrospective: add the package's row to the improvement log and triage the process notes collected during the package (see "Keeping This Skill Current").
 ```
 
 ## Hard Rules
@@ -84,6 +85,15 @@ Requirements such as "every loop is metered", "every endpoint is authenticated" 
 | Comparing approaches | Several implementers in parallel | Dual review + verification; about 3x the tokens of one implementer |
 
 These defaults rest on few samples (paradigm.md sections 2 and 12: one task for the reviewer comparison, one sample per model for the substitution benchmark, scored by the controller). Treat them as the current best guess, not a ranking; revisit them when a project's own review-quality records disagree.
+
+## Keeping This Skill Current
+
+The skill changes with use, through the improvement log in the skill's repository (`log/README.md`):
+
+- **While working:** note every process problem in `log/inbox.md` the moment it happens (date, project and package, what happened, cost). Do not change rules on the spot.
+- **At each close-out (step 17):** add the package's metrics row to `log/packages.csv`; sort each note into a general change to this skill, a line in the project's environment profile, or "watch".
+- **Thresholds:** a rule changes only after two occurrences or one costly one, and cites its source; rules that stop applying are pruned. Changing default models or removing a hard rule is proposed to the user first.
+- **Health check:** about every four packages, one GPT review reads the whole skill for contradictions, stale statements and project-specific content.
 
 ## Reference Files
 

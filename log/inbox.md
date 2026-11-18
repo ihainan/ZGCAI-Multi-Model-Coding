@@ -1,0 +1,9 @@
+# Inbox
+
+Format: `- YYYY-MM-DD <project>/<package>: <what happened> — cost: <...> [seen N×]`
+
+- 2026-11-16 zgcai-model-gateway/P1.9a: first implementation round (stage A of a 37-item spec) took 137 min, past the 1-1.5 h target in SKILL.md step 2 — cost: none yet; evidence for the split-at-drafting rule [seen 1×]
+- 2026-11-16 zgcai-model-gateway/P1.9a: the controller stopped to ask the user whether to start an approved next step, against the user's standing "keep going" instruction — cost: one idle turn; candidate controller rule "do not ask before steps the user already approved" [seen 2×]
+- 2026-11-16 zgcai-model-gateway/P1.9a: spec drafted by an Opus subagent from a controller brief, then revised five times by the same subagent on rulings; worked well and kept the controller's context small — cost: none; "drafter" role added to SKILL.md roles [seen 1×]
+- 2026-11-16 zgcai-model-gateway/P1.8d: the harness stopped two background jobs (a perf experiment and a reviewer retry) for low memory; they count as not done — cost: a user approval round-trip to rerun [seen 1×]
+- 2026-11-18 (backfill of packages.csv): every package from P1.6c to P1.8d needed 5-8 spec versions, including those with 16-30 acceptance items; package size alone does not cut spec rounds. Look at what the later rounds fixed before adding a rule — cost: about half a day of spec work per package [seen 8×, data]

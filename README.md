@@ -19,6 +19,7 @@ ln -s "$(pwd)/skills/multi-model-coding" <project>/.claude/skills/multi-model-co
 | `skills/multi-model-coding/reference/templates.md` | Task brief, review prompt, verification brief, rework brief and spec pre-read brief templates; default-conventions checklist; environment-profile template |
 | `skills/multi-model-coding/reference/tooling.md` | Codex and Devin commands, permission configs and known pitfalls |
 | `skills/multi-model-coding/reference/paradigm.md` | Full paradigm document, experiment data, the limits of that data, and per-package observations (an English edition of https://multi-model-paradigm.web.zgci.org) |
+| `log/` | Improvement log: process notes as they happen, one metrics row per finished work package, and how the skill is updated from them (`log/README.md`); not part of the installed skill |
 | `skills/multi-model-coding/scripts/` | `codex-review` (read-only Codex review wrapper), `make-blind-copy.sh`, `run-dual-review.sh`, `merge-findings.py`, `check-scope.sh`, sample Devin configs, and `tests/run-tests.sh` |
 
 ## Requirements
